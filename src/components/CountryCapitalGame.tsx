@@ -6,16 +6,39 @@ type Option = {
   state: ButtonState;
 };
 
+function randomize() {
+  return Math.random() - 0.5;
+}
+
+function getCountries(data: Record<string, string>) {
+  return Object.keys(data);
+}
+function getCapitals(data: Record<string, string>) {
+  return Object.values(data);
+}
+
+function getButtonClass(option: Option) {
+  if (option.state === "SELECTED") {
+    return "selected";
+  } else if (option.state === "WRONG") {
+    return "wrong";
+  } else {
+    return "";
+  }
+}
+
+function isPartOfPair(opt: Option, selected: Option, option: Option) {
+  return opt.value === selected.value || opt.value === option.value;
+}
+
 export default function CountryCapitalGame({
   data,
 }: {
   data: Record<string, string>;
 }) {
-  const countries = Object.keys(data);
-  const capitals = Object.values(data);
   const [options, setOptions] = useState<Option[]>(
-    [...countries, ...capitals]
-      .sort(() => Math.random() - 0.5)
+    [...getCountries(data), ...getCapitals(data)]
+      .sort(randomize)
       .map((value) => ({
         value,
         state: "DEFAULT",
@@ -23,7 +46,45 @@ export default function CountryCapitalGame({
   );
 
   const [selected, setSelected] = useState<Option>();
+
   const isGameOver = options.length === 0;
+
+  function onButtonClick(option: Option) {
+    if (!selected) {
+      setOptions(options.map((opt) => ({ ...opt, state: "DEFAULT" })));
+
+      setSelected(option);
+      setOptions(
+        //set bg to blue 009Bff
+        options.map((opt) => ({
+          ...opt,
+          state: opt === option ? "SELECTED" : "DEFAULT",
+        }))
+      );
+    } else {
+      const capital = data[option.value];
+      const selectedCapital = data[selected.value];
+
+      if (
+        //correct pair
+        selected.value === capital ||
+        selectedCapital === option.value
+      ) {
+        setOptions(
+          options.filter((opt) => !isPartOfPair(opt, option, selected))
+        );
+      } else {
+        //wrong pair
+        setOptions(
+          options.map((opt) => ({
+            ...opt,
+            state: isPartOfPair(opt, option, selected) ? "WRONG" : opt.state,
+          }))
+        );
+      }
+      setSelected(undefined);
+    }
+  }
   if (isGameOver) {
     return <div>Congretulations!</div>;
   }
@@ -32,60 +93,9 @@ export default function CountryCapitalGame({
       {options.map((option) => {
         return (
           <button
-            className={
-              option.state === "SELECTED"
-                ? "selected"
-                : option.state === "WRONG"
-                ? "wrong"
-                : ""
-            }
+            className={getButtonClass(option)}
             key={option.value}
-            onClick={() => {
-              if (!selected) {
-                setOptions(
-                  options.map((opt) => ({ ...opt, state: "DEFAULT" }))
-                );
-
-                setSelected(option);
-                setOptions(
-                  //set bg to blue 009Bff
-                  options.map((opt) => {
-                    return opt === option
-                      ? {
-                          ...option,
-                          state: "SELECTED",
-                        }
-                      : { ...opt, state: "DEFAULT" };
-                  })
-                );
-              } else {
-                if (
-                  //correct pair
-                  selected.value === data[option.value] ||
-                  data[selected.value] === option.value
-                ) {
-                  setOptions(
-                    options.filter((opt) => {
-                      return !(
-                        opt.value === selected.value ||
-                        opt.value === option.value
-                      );
-                    })
-                  );
-                } else {
-                  //wrong pair
-                  setOptions(
-                    options.map((opt) => {
-                      return opt.value === selected.value ||
-                        opt.value === option.value
-                        ? { ...opt, state: "WRONG" }
-                        : opt;
-                    })
-                  );
-                }
-                setSelected(undefined);
-              }
-            }}
+            onClick={() => onButtonClick(option)}
           >
             {option.value}
           </button>
